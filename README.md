@@ -9,9 +9,9 @@ Gael Force V- 5327V
 > [!NOTE]
 > Note that PROS is only support on ancient compiler
 
-1. Download `gfrlib.zip` from the [latest release](https://github.com/AgilanSam/5327V/releases/latest)
-2. Add the zip file to your project
-3. Run `pros c fetch gfrlib.zip; pros c apply gfrlib@version` in the PROS integrated terminal
+1. Download zip.
+2. Open PROS terminal after unzipping the folder.
+3. Run `pros mu` in the PROS integrated terminal to run the code!
 
 ## Additional Versions
 
