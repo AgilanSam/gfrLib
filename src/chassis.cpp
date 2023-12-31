@@ -56,8 +56,24 @@ void Chassis::tank(float left, float right) {
 }
 
 void Chassis::arcade(float lateral, float angular) {
-    leftMotors->move(lateral + angular);
-    rightMotors->move(lateral - angular);
+    double leftmotorsmove = lateral + angular;
+    double rightmotorsmove = lateral - angular;
+    if (leftmotorsmove > maxSpeedglobal) {
+        leftmotorsmove = maxSpeedglobal;
+    } else if (leftmotorsmove < -maxSpeedglobal) {
+        leftmotorsmove = -maxSpeedglobal;
+    } else {
+        leftmotorsmove = leftmotorsmove;
+    }
+    if (rightmotorsmove > maxSpeedglobal) {
+        rightmotorsmove = maxSpeedglobal;
+    } else if (rightmotorsmove < -maxSpeedglobal) {
+        rightmotorsmove = -maxSpeedglobal;
+    } else {
+        rightmotorsmove = rightmotorsmove;
+    }
+    leftMotors->move(leftmotorsmove);
+    rightMotors->move(rightmotorsmove);
 }
 
 
@@ -253,6 +269,7 @@ std::pair<double, double> Chassis::getPose(){
 } 
 void Chassis::moveToPoint(float x1, float y1, int timeout, float maxSpeed){
         //turn part
+        maxSpeedglobal = maxSpeed;
         float angleError = atan2(y - y1, x - x1); //can flip this
         turn(rollAngle180(radToDeg(angleError))); //was negative
         float lateralError = distance(x,y, x1,y1);
@@ -262,7 +279,17 @@ void Chassis::moveToPoint(float x1, float y1, int timeout, float maxSpeed){
     
 void Chassis::turnToPoint(float x1, float y1, int timeout, float maxSpeed){
         //turn part
+        maxSpeedglobal = maxSpeed;
         float angleError = atan2(y - y1, x - x1);
         turn(rollAngle180(radToDeg(angleError)));
+    
+}
+void Chassis::moveToPointconstant(float x1, float y1, int timeout, float maxSpeed){
+        //turn part
+        maxSpeedglobal = maxSpeed;
+        float angleError = atan2(y - y1, x - x1); //can flip this
+        turn(rollAngle180(radToDeg(angleError))); //was negative
+        float lateralError = distance(x,y, x1,y1);
+        move(lateralError);
     
 }
