@@ -253,8 +253,8 @@ std::pair<double, double> Chassis::getPose(){
 } 
 void Chassis::moveToPoint(float x1, float y1, int timeout, float maxSpeed){
         //turn part
-        float angleError = atan2(y1 - y, x1 - x);
-        turn(rollAngle180(-radToDeg(angleError)));
+        float angleError = atan2(y - y1, x - x1); //can flip this
+        turn(rollAngle180(radToDeg(angleError))); //was negative
         float lateralError = distance(x,y, x1,y1);
         move(lateralError);
     
@@ -262,7 +262,7 @@ void Chassis::moveToPoint(float x1, float y1, int timeout, float maxSpeed){
     
 void Chassis::turnToPoint(float x1, float y1, int timeout, float maxSpeed){
         //turn part
-        float angleError = atan2(y1 - y, x1 - x);
-        turn(rollAngle180(-radToDeg(angleError)));
+        float angleError = atan2(y - y1, x - x1);
+        turn(rollAngle180(radToDeg(angleError)));
     
 }
