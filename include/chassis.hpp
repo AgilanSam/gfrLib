@@ -33,7 +33,10 @@ class Chassis {
         void move_without_settle(float distance, float timeout);
         void swing_without_settle(float heading, bool isLeft, float timeout);
         void moveToPoint(float x1, float y1, int timeout, float maxSpeed);
+        void moveToPointTurn(float x1, float y1, int timeout, float maxSpeed);
         void arc(float heading, double leftMult, double rightMult);
+        void setPose(float x1, float y1, float theta1);
+        std::pair<double, double> getPose();
         float get_absolute_heading();
         float reduce_0_to_360(float angle);
         double x;

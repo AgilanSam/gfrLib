@@ -242,7 +242,15 @@ float distance(int x1, int y1, int x2, int y2)
 //odom movements
 float radToDeg(float rad) { return rad * 180 / M_PI; }
 float degToRad(float deg) { return deg * M_PI / 180; }
+void Chassis::setPose(float x1, float y1, float theta1) {
+    x = x1;
+    y = y1;
+    imu->set_heading(theta1);
+}
+std::pair<double, double> Chassis::getPose(){
+    return std::make_pair(x, y);
 
+} 
 void Chassis::moveToPoint(float x1, float y1, int timeout, float maxSpeed){
         //turn part
         float angleError = atan2(y1 - y, x1 - x);
