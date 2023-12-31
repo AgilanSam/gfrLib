@@ -105,10 +105,14 @@ chassis.move(-90, true); //swings -90 to the left
  ```
 // go to an angle with a certain curvature
 chassis.arc(90, 0.3, 0.6);
+```
+
+## Driver Control Features
+> chassis.tank(controller input, controller input) can be used to control the robot with a tank fashion.
+> chassis.arcade(controller input, controller input) can be used to control the robot with an arcade fashion.
 
 
 #### _Contributions welcome. Anything missing? Send in a pull request. Thanks._
 Follow  ([@gaelforcev](https://instagram.com/gaelforcev)) on Instagram for updates.
 
 ---
-
