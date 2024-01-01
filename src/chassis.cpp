@@ -388,13 +388,12 @@ void Chassis::activeMoveToPoint(float x1, float y1, int timeout, float maxSpeed)
     tank(0,0);
 
 }
-//Below is boomerang
 void Chassis::moveToPose(float x1, float y1, float theta1, int timeout, bool forwards, float maxSpeed, bool async,float chasePower,
-                          float lead) {
+                          float lead, bool linearexit, float linearexitrange) {
     if (!mutex.take(10)) return;
     // if the function is async, run it in a new task
     if (async) {
-        pros::Task task([&]() { moveToPose(x1, y1, theta1, timeout, forwards, maxSpeed, false,chasePower, lead); });
+        pros::Task task([&]() { moveToPose(x1, y1, theta1, timeout, forwards, maxSpeed, false,chasePower, lead, linearexit, linearexitrange); });
         mutex.give();
         pros::delay(10); // delay to give the task time to start
         return;
@@ -416,7 +415,6 @@ void Chassis::moveToPose(float x1, float y1, float theta1, int timeout, bool for
 
     bool close = false;
     if(chasePower ==  0)chasePower = 40; // make chasePower globalized in chassis setup
-
     while ((!drivePID.isSettled() || pros::millis() - start < timeout)) {
         double currX = x;
         double currY = y;
@@ -446,6 +444,11 @@ void Chassis::moveToPose(float x1, float y1, float theta1, int timeout, bool for
         // calculate error
         float angularError = angleError(pointAngleDifference(carrotX, carrotY, currX, currY), currTheta, true); // angular error
         float linearError = distance(carrotX, carrotY,currX, currY) * cos(angularError); // linear error
+        if (linearexit=true && fabs(linearError)>linearexitrange) {
+            Chassis::leftMotors->set_brake_modes(pros::E_MOTOR_BRAKE_COAST);
+            Chassis::rightMotors->set_brake_modes(pros::E_MOTOR_BRAKE_COAST);
+            break;
+        } 
         if (close) angularError = angleError(targetTheta, currTheta, true); // settling behavior
         if (!forwards) linearError = -linearError;
 
@@ -476,12 +479,12 @@ void Chassis::moveToPose(float x1, float y1, float theta1, int timeout, bool for
         tank(leftPower, rightPower);
         pros::delay(10);
 
-    }
+    } 
+    
     tank(0,0);
     distTravelled = -1;
     mutex.give();
 }
-
 
 void Chassis::move_without_settletime(float distance, float timeout){
     drivePID.reset();
