@@ -94,19 +94,19 @@ chassis.x, chassis.y, chassis.heading
 
 
 ## PID Movement Functions
-### chassis.move(distance);
+### chassis.move(distance, maxSpeed = 127);
  ```
 chassis.move(24);
 chassis.move(-24);
 
 ```
-### chassis.turn(angle);
+### chassis.turn(angle, maxSpeed = 127);
  ```
 chassis.turn(90);
 chassis.turn(-90);
 
 ```
-### chassis.swing(angle, bool isLeft);
+### chassis.swing(angle, bool isLeft,maxSpeed = 127);
  ```
 chassis.swing(90, false); // swings 90 to the right
 chassis.move(-90, true); //swings -90 to the left
