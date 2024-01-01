@@ -469,7 +469,7 @@ void Chassis::activeMoveToPoint(float x1, float y1, int timeout, float maxSpeed)
             else if (linearPower < -maxTurnSpeed && !close) linearPower = -maxTurnSpeed;
         }
         // prioritize turning over moving - parameterized smoothness
-        float overturn = fabs(angularPower) + fabs(linearPower) - maxSpeed * smoothness;
+        float overturn = fabs(angularPower) + fabs(linearPower) - maxSpeed - maxSpeed * smoothness;
         if (overturn > 0) linearPower -= linearPower > 0 ? overturn : -overturn;
 
         
