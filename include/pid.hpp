@@ -11,6 +11,8 @@ class PID {
 
         float update(float target, float actual);
 
+        float updateerror(float error);
+
         void reset();
 
         bool isSettled();

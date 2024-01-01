@@ -58,20 +58,6 @@ void Chassis::tank(float left, float right) {
 void Chassis::arcade(float lateral, float angular) {
     double leftmotorsmove = lateral + angular;
     double rightmotorsmove = lateral - angular;
-    if (leftmotorsmove > maxSpeedglobal) {
-        leftmotorsmove = maxSpeedglobal;
-    } else if (leftmotorsmove < -maxSpeedglobal) {
-        leftmotorsmove = -maxSpeedglobal;
-    } else {
-        leftmotorsmove = leftmotorsmove;
-    }
-    if (rightmotorsmove > maxSpeedglobal) {
-        rightmotorsmove = maxSpeedglobal;
-    } else if (rightmotorsmove < -maxSpeedglobal) {
-        rightmotorsmove = -maxSpeedglobal;
-    } else {
-        rightmotorsmove = rightmotorsmove;
-    }
     leftMotors->move(leftmotorsmove);
     rightMotors->move(rightmotorsmove);
 }
@@ -89,7 +75,7 @@ static float rollAngle180(float angle) {
     return angle;
 }
 
-void Chassis::move(float distance) {
+void Chassis::move(float distance, float maxSpeed) {
     drivePID.reset();
     backwardPID.reset();
     headingPID.reset();
@@ -104,18 +90,25 @@ void Chassis::move(float distance) {
         float error = rollAngle180(angle - imu->get_heading());
         float pidAngOutput = headingPID.update(0, -error);
         float pidOutputLateral = backwardPID.update(distance, distanceTravelled);
+        if (pidOutputLateral<-maxSpeed) {
+            pidOutputLateral=-maxSpeed; 
+        }
         arcade(pidOutputLateral, pidAngOutput);
 
         pros::delay(20);
     } while (!backwardPID.isSettled());
     } else{
         do {
+            
         float deltaLeft = leftMotors->get_positions()[0] - beginningLeft;
         float deltaRight = rightMotors->get_positions()[0] - beginningRight;
         float distanceTravelled = (deltaLeft + deltaRight) / 2 * wheelDiameter * M_PI * gearRatio;
         float error = rollAngle180(angle - imu->get_heading());
         float pidAngOutput = headingPID.update(0, -error);
         float pidOutputLateral = drivePID.update(distance, distanceTravelled);
+        if (pidOutputLateral>maxSpeed) {
+            pidOutputLateral=maxSpeed; 
+        }
         arcade(pidOutputLateral, pidAngOutput);
 
         pros::delay(20);
@@ -124,13 +117,19 @@ void Chassis::move(float distance) {
 
     arcade(0, 0);
 }
-void Chassis::turn(float heading) {
+void Chassis::turn(float heading,float maxSpeed) {
     turnPID.reset();
 
     do {
         float error = rollAngle180(heading - imu->get_heading());
         float pidOutput = turnPID.update(0, -error);
-
+        if (pidOutput>maxSpeed) {
+            pidOutput=maxSpeed; 
+        } else if (pidOutput<-maxSpeed) {
+            pidOutput=-maxSpeed; 
+        } else {
+            pidOutput = pidOutput;
+        }
         arcade(0, pidOutput);
 
         pros::lcd::print(1, "heading: %f", imu->get_heading());
@@ -143,15 +142,21 @@ void Chassis::turn(float heading) {
 
 
 
-void Chassis::swing(float heading, bool isLeft){
+void Chassis::swing(float heading, bool isLeft, float maxSpeed){
     swingPID.reset();
     if(isLeft){
         do {
         float error = rollAngle180(heading - imu->get_heading());
         float pidOutput = swingPID.update(0, -error);
         Chassis::rightMotors->set_brake_modes(pros::E_MOTOR_BRAKE_HOLD);
+        if (pidOutput>maxSpeed) {
+            pidOutput=maxSpeed; 
+        } else if (pidOutput<-maxSpeed) {
+            pidOutput=-maxSpeed; 
+        } else {
+            pidOutput = pidOutput;
+        }
         tank(pidOutput, 0);
-
         pros::lcd::print(1, "heading: %f", imu->get_heading());
 
         pros::delay(20);
@@ -162,6 +167,13 @@ void Chassis::swing(float heading, bool isLeft){
         float error = rollAngle180(heading - imu->get_heading());
         float pidOutput = swingPID.update(0, -error);
         Chassis::leftMotors->set_brake_modes(pros::E_MOTOR_BRAKE_HOLD);
+        if (pidOutput>maxSpeed) {
+            pidOutput=maxSpeed; 
+        } else if (pidOutput<-maxSpeed) {
+            pidOutput=-maxSpeed; 
+        } else {
+            pidOutput = pidOutput;
+        }
         tank(0, pidOutput);
 
         pros::lcd::print(1, "heading: %f", imu->get_heading());
@@ -269,27 +281,27 @@ std::pair<double, double> Chassis::getPose(){
 } 
 void Chassis::moveToPoint(float x1, float y1, int timeout, float maxSpeed){
         //turn part
-        maxSpeedglobal = maxSpeed;
         float angleError = atan2(y - y1, x - x1); //can flip this
         turn(rollAngle180(radToDeg(angleError))); //was negative
         float lateralError = distance(x,y, x1,y1);
-        move(lateralError);
+        move(lateralError, maxSpeed);
     
 }
     
 void Chassis::turnToPoint(float x1, float y1, int timeout, float maxSpeed){
         //turn part
-        maxSpeedglobal = maxSpeed;
         float angleError = atan2(y - y1, x - x1);
-        turn(rollAngle180(radToDeg(angleError)));
+        turn(rollAngle180(radToDeg(angleError)), maxSpeed);
     
 }
-void Chassis::moveToPointconstant(float x1, float y1, int timeout, float maxSpeed){
-        //turn part
-        maxSpeedglobal = maxSpeed;
-        float angleError = atan2(y - y1, x - x1); //can flip this
-        turn(rollAngle180(radToDeg(angleError))); //was negative
-        float lateralError = distance(x,y, x1,y1);
-        move(lateralError);
+// void Chassis::moveToPointconstant(float x1, float y1, int timeout, float maxSpeed){
+//         //turn part
+//         maxSpeedglobal = maxSpeed;
+//         float angleError = atan2(y - y1, x - x1); //can flip this
+//         float lateralError = distance(x,y, x1,y1);
+//         turn(rollAngle180(radToDeg(angleError))); //was negative
+//         float pidOutputLateral = backwardPID.update(distance, distanceTravelled);
+//         arcade(pidOutputLateral, pidAngOutput);
+//         move(lateralError);
     
-}
+// }

@@ -45,6 +45,20 @@ float PID::update(float target, float actual) {
     return error * kp + deltaError * kd + errorSum * ki;
 }
 
+float PID::updateerror(float error) {
+
+    float deltaError = error - lastError;
+    lastError = error;
+
+    errorSum += error;
+
+    if (std::fabs(errorSum) > iMax) {
+        errorSum = 0;
+    }
+
+    return error * kp + deltaError * kd + errorSum * ki;
+}
+
 void PID::reset() {
     maxTimer = 0;
     settleTimer = 0;
