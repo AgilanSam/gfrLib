@@ -16,6 +16,7 @@ Gael Force V- 5327V
 ## Additional Versions
 
 Want a different version of our library? Let us know by opening an issue [here](https://github.com/AgilanSam/5327V/issues/new)
+P.S adding async actions to all movements soon
 
 ## Setup
 ```
