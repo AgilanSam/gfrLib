@@ -82,7 +82,18 @@ PID(kP, kI, kD, kImax, settleError, settleTime, maxSettleError, maxSettleTime, m
   
 ## Odometry
  > IME Odometry(adding Kalman Filters soon)
-## Movement Functions
+```
+//sets the coordinates and angle for the odometry system
+chassis.setPose(x,y,angle);
+```
+```
+//gets the odometry coordinates and angle
+chassis.getPose(); //returns a std::pair with x,and y. To get the individual x, y, and angle use:
+chassis.x, chassis.y, chassis.heading
+```
+
+
+## PID Movement Functions
 ### chassis.move(distance);
  ```
 chassis.move(24);
@@ -106,10 +117,29 @@ chassis.move(-90, true); //swings -90 to the left
 // go to an angle with a certain curvature
 chassis.arc(90, 0.3, 0.6);
 ```
+## Odometry Movement Functions
+
+### chassis.moveToPoint(x,y,timeout, maxSpeed);
+ ```
+// moves to a point after predetermining the angle and distance to the target point from the odom pose
+chassis.moveToPoint(24, 24, 2000, 127);
+```
+### chassis.activeMoveToPoint(x,y,timeout, maxSpeed); //recomended
+ ```
+// moves to a point while constantly updating the distance and angular components to reach the certain point.
+chassis.activeMoveToPoint(24, 24, 2000, 127);
+```
+### chassis.moveToPose(x, y, angle, timeout, bool forwards,maxSpeed,async, chasePower, lead, bool linearexit, float linearexitrange, float smoothness);
+ ```
+// moves to a target pose from the odom pose with customizable parameters such as its chasepower, curvature, maxspeed, smoothness, and the ability to chain into the next movement. This is going to get added in the next update.
+chassis.moveToPose(24, 24, 90, 2000, true, 127, 50, 0.6, false, 0, 1);
+// For the last parameter of smoothness: higher = smoother since it prioritizes linear output more. 
+```
 
 ## Driver Control Features
-> chassis.tank(controller input, controller input) can be used to control the robot with a tank fashion.
-> chassis.arcade(controller input, controller input) can be used to control the robot with an arcade fashion.
+
+### chassis.tank(controller input, controller input) can be used to control the robot with a tank fashion.
+### chassis.arcade(controller input, controller input) can be used to control the robot with an arcade fashion.
 
 
 #### _Contributions welcome. Anything missing? Send in a pull request. Thanks._
