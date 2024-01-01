@@ -305,3 +305,62 @@ void Chassis::turnToPoint(float x1, float y1, int timeout, float maxSpeed){
 //         move(lateralError);
     
 // }
+float Chassis::angleError(float angle1, float angle2, bool radians) {
+    float max = radians ? 2 * M_PI : 360;
+    float half = radians ? M_PI : 180;
+    angle1 = fmod(angle1, max);
+    angle2 = fmod(angle2, max);
+    float error = angle1 - angle2;
+    if (error > half) error -= max;
+    else if (error < -half) error += max;
+    return error;
+}
+void Chassis::activeMoveToPoint(float x1, float y1, int timeout, float maxSpeed){
+    turnPID.reset();
+    drivePID.reset();
+    
+    float prevLateralPower = 0;
+    float prevAngularPower = 0;
+    bool close = false;uint32_t start = pros::millis();
+    
+    while(((start < timeout) || (!drivePID.isSettled() && !turnPID.isSettled()))){
+        heading = std::fmod(heading, 360);
+
+        //update error
+        float deltaX = x1 - x;
+        float deltaY = y1 - y;
+        float targetTheta = fmod(radToDeg(M_PI_2 - atan2(deltaY, deltaX)), 360);
+        float hypot = std::hypot(deltaX, deltaY);
+        float diffTheta1 = angleError(heading, targetTheta, false);
+        float diffTheta2 = angleError(heading, targetTheta + 180, false);
+        float angularError = (std::fabs(diffTheta1) < std::fabs(diffTheta2)) ? diffTheta1 : diffTheta2;
+        float lateralError = hypot * cos(degToRad(std::fabs(diffTheta1)));
+        float lateralPower = drivePID.update(lateralError, 0);
+        float angularPower = -turnPID.update(angularError, 0);
+
+        if (distance(x1, y1, x, y) < 7.5) {
+             close = true;
+             maxSpeed = (std::fabs(prevLateralPower) < 30) ? 30 : std::fabs(prevLateralPower);
+         }
+        if (lateralPower > maxSpeed) lateralPower = maxSpeed;
+        else if (lateralPower < -maxSpeed) lateralPower = -maxSpeed;
+        if (close) angularPower = 0;
+
+        prevLateralPower = lateralPower;
+        prevAngularPower = angularPower;
+
+        float leftPower = lateralPower + angularPower;
+        float rightPower = lateralPower - angularPower;
+
+        float ratio = std::max(std::fabs(leftPower), std::fabs(rightPower)) / maxSpeed;
+        if (ratio > 1) {
+            leftPower /= ratio;
+            rightPower /= ratio;
+        }
+        tank(leftPower, rightPower);
+        pros::delay(10);
+    }
+    tank(0,0);
+
+}
+

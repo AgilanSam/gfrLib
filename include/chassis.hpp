@@ -36,10 +36,11 @@ class Chassis {
         void moveToPointTurn(float x1, float y1, int timeout, float maxSpeed=127);
         void arc(float heading, double leftMult, double rightMult);
         void setPose(float x1, float y1, float theta1);
-        void moveToPointconstant(float x1, float y1, int timeout, float maxSpeed=127);
+        void activeMoveToPoint(float x1, float y1, int timeout, float maxSpeed=127);
         std::pair<double, double> getPose();
         float get_absolute_heading();
         float reduce_0_to_360(float angle);
+        
         double x;
         double y;
         double heading = 0;
@@ -47,7 +48,7 @@ class Chassis {
         pros::MotorGroup* leftMotors;
         pros::MotorGroup* rightMotors;
         pros::IMU* imu;
-
+        float angleError(float angle1, float angle2, bool radians);
         const float wheelDiameter;
         const float gearRatio;
         
