@@ -133,7 +133,7 @@ chassis.activeMoveToPoint(24, 24, 2000, 127);
  ```
 // moves to a target pose from the odom pose with customizable parameters such as its chasepower, curvature, maxspeed, smoothness, and the ability to chain into the next movement. This is going to get added in the next update.
 chassis.moveToPose(24, 24, 90, 2000, true, 127, 50, 0.6, false, 0, 1);
-// For the last parameter of smoothness: higher = smoother since it prioritizes linear output more. 
+// smoothness: higher = smoother since it prioritizes linear output more. 
 ```
 
 ## Driver Control Features
