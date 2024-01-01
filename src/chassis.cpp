@@ -387,8 +387,7 @@ void Chassis::activeMoveToPoint(float x1, float y1, int timeout, float maxSpeed)
     }
     tank(0,0);
 
-}
-void Chassis::moveToPose(float x1, float y1, float theta1, int timeout, bool forwards, float maxSpeed, bool async,float chasePower,
+}void Chassis::moveToPose(float x1, float y1, float theta1, int timeout, bool forwards, float maxSpeed, bool async,float chasePower,
                           float lead, bool linearexit, float linearexitrange, float smoothness) {
     if (!mutex.take(10)) return;
     // if the function is async, run it in a new task
@@ -455,8 +454,7 @@ void Chassis::moveToPose(float x1, float y1, float theta1, int timeout, bool for
         // get PID outputs
         float angularPower = -turnPID.update(radToDeg(angularError), 0);
         float linearPower = drivePID.update(linearError, 0);
-        float rescale = linearPower + fabs(angularPower) - 127.0 -127.0 * smoothness;
-        if(rescale > 0){linearPower -= rescale};
+        
         
         float curvature = fabs(getCurvature(currX,currY, currTheta, carrotX, carrotY, 0));
         if (curvature == 0) curvature = -1;
@@ -470,9 +468,11 @@ void Chassis::moveToPose(float x1, float y1, float theta1, int timeout, bool for
             if (linearPower > maxTurnSpeed && !close) linearPower = maxTurnSpeed;
             else if (linearPower < -maxTurnSpeed && !close) linearPower = -maxTurnSpeed;
         }
-        // prioritize turning over moving - take this out for smoothness
-        float overturn = fabs(angularPower) + fabs(linearPower) - maxSpeed;
+        // prioritize turning over moving - parameterized smoothness
+        float overturn = fabs(angularPower) + fabs(linearPower) - maxSpeed * smoothness;
         if (overturn > 0) linearPower -= linearPower > 0 ? overturn : -overturn;
+
+        
 
         // calculate motor powers
         float leftPower = linearPower + angularPower;
@@ -487,7 +487,6 @@ void Chassis::moveToPose(float x1, float y1, float theta1, int timeout, bool for
     distTravelled = -1;
     mutex.give();
 }
-
 void Chassis::move_without_settletime(float distance, float timeout){
     drivePID.reset();
 
