@@ -6,6 +6,11 @@
 #include <cmath>
 #include <iostream>
 
+#define M_PI		3.14159265358979323846
+#define M_PI_2		1.57079632679489661923
+#define M_PI_4		0.78539816339744830962
+#define M_1_PI		0.31830988618379067154
+#define M_2_PI		0.63661977236758134308
 
 Chassis::Chassis(pros::MotorGroup* leftMotors, pros::MotorGroup* rightMotors, pros::IMU* inertial, const float wheelDiameter,
                  const float gearRatio, PID drivePID, PID backwardPID, PID turnPID, PID swingPID, PID arcPID, PID headingPID)
@@ -185,28 +190,28 @@ void Chassis::swing(float heading, bool isLeft, float maxSpeed){
 }
 
 
-void Chassis::move_without_settle(float distance, float timeout){
-    drivePID.reset();
 
+//try
+void Chassis::move_without_settle(float distance, float exitrange){
+    drivePID.reset();
     float beginningLeft = leftMotors->get_positions()[0];
     float beginningRight = rightMotors->get_positions()[0];
-
+    float error;
     auto start = pros::millis();
     do {
         float deltaLeft = leftMotors->get_positions()[0] - beginningLeft;
         float deltaRight = rightMotors->get_positions()[0] - beginningRight;
         float distanceTravelled = (deltaLeft + deltaRight) / 2 * wheelDiameter * M_PI * gearRatio;
-
+        error = distance-distanceTravelled;
         float pidOutput = drivePID.update(distance, distanceTravelled);
         arcade(pidOutput, 0);
 
         pros::delay(20);
-    } while ((pros::millis() - start) != timeout);
+    } while (!drivePID.isSettled() || fabs(error) > exitrange); 
     arcade(0,0);
     leftMotors->set_brake_modes(pros::E_MOTOR_BRAKE_COAST);
     rightMotors->set_brake_modes(pros::E_MOTOR_BRAKE_COAST);
 }
-//try
 
 void Chassis::arc(float heading, double leftMult, double rightMult){
     arcPID.reset();
@@ -261,12 +266,15 @@ void Chassis::swing_without_settle(float heading, bool isLeft, float timeout){
     rightMotors->set_brake_modes(pros::E_MOTOR_BRAKE_COAST);
     }
 }
-float distance(int x1, int y1, int x2, int y2) 
+float distance(double x1, double y1, double x2, double y2) 
 { 
     // Calculating distance 
     return sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2) * 1.0); 
 } 
 
+float pointAngleDifference(double x1, double y1, double x2, double y2){
+    return std::atan2(y2- y1, x2 - x1); 
+}
 //odom movements
 float radToDeg(float rad) { return rad * 180 / M_PI; }
 float degToRad(float deg) { return deg * M_PI / 180; }
@@ -315,13 +323,30 @@ float Chassis::angleError(float angle1, float angle2, bool radians) {
     else if (error < -half) error += max;
     return error;
 }
+int sgn(float x) {
+    if (x < 0) return -1;
+    else return 1;
+}
+float getCurvature(double posex, double posey, double posetheta, double otherx, double othery, double othertheta) {
+    // calculate whether the pose is on the left or right side of the circle
+    float side = sgn(std::sin(posetheta) * (otherx - othery) - std::cos(posetheta) * (othery - posey));
+    // calculate center point and radius
+    float a = -std::tan(posetheta);
+    float c = std::tan(posetheta) * posex - posey;
+    float x = std::fabs(a * otherx + othery + c) / std::sqrt((a * a) + 1);
+    float d = std::hypot(otherx - posex, othery - posey);
+
+    // return curvature
+    return side * ((2 * x) / (d * d));
+}
 void Chassis::activeMoveToPoint(float x1, float y1, int timeout, float maxSpeed){
     turnPID.reset();
     drivePID.reset();
     
     float prevLateralPower = 0;
     float prevAngularPower = 0;
-    bool close = false;uint32_t start = pros::millis();
+    bool close = false;
+    uint32_t start = pros::millis();
     
     while(((start < timeout) || (!drivePID.isSettled() && !turnPID.isSettled()))){
         heading = std::fmod(heading, 360);
@@ -363,4 +388,119 @@ void Chassis::activeMoveToPoint(float x1, float y1, int timeout, float maxSpeed)
     tank(0,0);
 
 }
+//Below is boomerang
+void Chassis::moveToPose(float x1, float y1, float theta1, int timeout, bool forwards, float maxSpeed, bool async,float chasePower,
+                          float lead) {
+    if (!mutex.take(10)) return;
+    // if the function is async, run it in a new task
+    if (async) {
+        pros::Task task([&]() { moveToPose(x1, y1, theta1, timeout, forwards, maxSpeed, false,chasePower, lead); });
+        mutex.give();
+        pros::delay(10); // delay to give the task time to start
+        return;
+    }
+    turnPID.reset();
+    drivePID.reset();
+    
+    double targetTheta = M_PI_2 - degToRad(theta1);
+    float prevLateralPower = 0;
+    float prevAngularPower = 0;
 
+    //last pose
+    float lastposex = x;
+    float lastposey = y;
+    float lastposetheta = heading;
+
+    auto start = pros::millis();
+    if (!forwards) targetTheta = fmod(targetTheta + M_PI, 2 * M_PI); // backwards movement
+
+    bool close = false;
+    if(chasePower ==  0)chasePower = 40; // make chasePower globalized in chassis setup
+
+    while ((!drivePID.isSettled() || pros::millis() - start < timeout)) {
+        double currX = x;
+        double currY = y;
+        double currHeading = heading; //for reference
+        double currTheta = degToRad(heading);
+
+        if (!forwards) currTheta += M_PI;
+        distTravelled += distance(lastposex, lastposey, currX, currY); 
+
+        //update prev
+        lastposex = currX;
+        lastposey = currY;
+        lastposetheta = currHeading;
+
+        if (distance(x1, y1, x, y) < 7.5) {
+            close = true;
+        }
+
+        //carrot - 2 times for each part
+        double carrotX = x1 - (cos(targetTheta) * lead * distance( x1, y1,currX, currY));
+        double carrotY = y1 - (sin(targetTheta) * lead * distance( x1, y1,currX, currY));   
+        if(close){ //settle behavior
+            x1 = carrotX;
+            y1 = carrotY;
+        }
+
+        // calculate error
+        float angularError = angleError(pointAngleDifference(carrotX, carrotY, currX, currY), currTheta, true); // angular error
+        float linearError = distance(carrotX, carrotY,currX, currY) * cos(angularError); // linear error
+        if (close) angularError = angleError(targetTheta, currTheta, true); // settling behavior
+        if (!forwards) linearError = -linearError;
+
+        // get PID outputs
+        float angularPower = -turnPID.update(radToDeg(angularError), 0);
+        float linearPower = drivePID.update(linearError, 0);
+        
+        float curvature = fabs(getCurvature(currX,currY, currTheta, carrotX, carrotY, 0));
+        if (curvature == 0) curvature = -1;
+        float radius = 1 / curvature;
+
+        // calculate the maximum speed at which the robot can turn
+        // using the formula v = sqrt( u * r * g )
+        if (radius != -1) {
+            float maxTurnSpeed = sqrt(chasePower * radius * 9.8);
+            // the new linear power is the minimum of the linear power and the max turn speed
+            if (linearPower > maxTurnSpeed && !close) linearPower = maxTurnSpeed;
+            else if (linearPower < -maxTurnSpeed && !close) linearPower = -maxTurnSpeed;
+        }
+        // prioritize turning over moving
+        float overturn = fabs(angularPower) + fabs(linearPower) - maxSpeed;
+        if (overturn > 0) linearPower -= linearPower > 0 ? overturn : -overturn;
+
+        // calculate motor powers
+        float leftPower = linearPower + angularPower;
+        float rightPower = linearPower - angularPower;
+
+        tank(leftPower, rightPower);
+        pros::delay(10);
+
+    }
+    tank(0,0);
+    distTravelled = -1;
+    mutex.give();
+}
+
+
+void Chassis::move_without_settletime(float distance, float timeout){
+    drivePID.reset();
+
+    float beginningLeft = leftMotors->get_positions()[0];
+    float beginningRight = rightMotors->get_positions()[0];
+
+    auto start = pros::millis();
+    do {
+        float deltaLeft = leftMotors->get_positions()[0] - beginningLeft;
+        float deltaRight = rightMotors->get_positions()[0] - beginningRight;
+        float distanceTravelled = (deltaLeft + deltaRight) / 2 * wheelDiameter * M_PI * gearRatio;
+
+        float pidOutput = drivePID.update(distance, distanceTravelled);
+        arcade(pidOutput, 0);
+
+        pros::delay(20);
+    } while ((pros::millis() - start) != timeout);
+    arcade(0,0);
+    leftMotors->set_brake_modes(pros::E_MOTOR_BRAKE_COAST);
+    rightMotors->set_brake_modes(pros::E_MOTOR_BRAKE_COAST);
+}

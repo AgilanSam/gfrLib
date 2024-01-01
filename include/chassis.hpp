@@ -30,17 +30,19 @@ class Chassis {
         void turn(float heading, float maxSpeed=127);
         void swing(float heading, bool isLeft, float maxSpeed=127);
         void turnToPoint(float x1, float y1, int timeout, float maxSpeed=127);
-        void move_without_settle(float distance, float timeout);
+        void move_without_settle(float distance, float exitrange);
         void swing_without_settle(float heading, bool isLeft, float timeout);
         void moveToPoint(float x1, float y1, int timeout, float maxSpeed=127);
         void moveToPointTurn(float x1, float y1, int timeout, float maxSpeed=127);
         void arc(float heading, double leftMult, double rightMult);
         void setPose(float x1, float y1, float theta1);
         void activeMoveToPoint(float x1, float y1, int timeout, float maxSpeed=127);
+        void move_without_settletime(float distance, float timeout); 
         std::pair<double, double> getPose();
-        float get_absolute_heading();
-        float reduce_0_to_360(float angle);
         
+        
+        void moveToPose(float x1, float y1, float theta1, int timeout, bool forwards, float maxSpeed, bool async, float chasePower,
+                             float lead);
         double x;
         double y;
         double heading = 0;
@@ -51,5 +53,7 @@ class Chassis {
         float angleError(float angle1, float angle2, bool radians);
         const float wheelDiameter;
         const float gearRatio;
-        
+        pros::Mutex mutex;
+        double distTravelled = 0;
+        float get_absolute_heading();
 };
