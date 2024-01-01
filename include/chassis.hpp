@@ -38,6 +38,7 @@ class Chassis {
         void setPose(float x1, float y1, float theta1);
         void activeMoveToPoint(float x1, float y1, int timeout, float maxSpeed=127);
         void move_without_settletime(float distance, float timeout); 
+        void waitUntilDist(float dist);
         std::pair<double, double> getPose();
         
         
