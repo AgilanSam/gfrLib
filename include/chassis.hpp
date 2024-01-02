@@ -5,6 +5,7 @@
 #include "pose.hpp"
 #include "pid.hpp"
 
+
 class Chassis {
     public:
         
@@ -14,10 +15,10 @@ class Chassis {
         PID headingPID;
         PID backwardPID;
         PID arcPID;
-
+    
 
         Chassis(pros::MotorGroup* leftMotors, pros::MotorGroup* rightMotors, pros::IMU* inertial,
-                const float wheelDiameter, const float gearRatio, PID drivePID, PID backwardPID, PID turnPID, PID swingPID, PID arcPID, PID headingPID);
+                const float wheelDiameter, const float trackWidth, const float gearRatio, PID drivePID, PID backwardPID, PID turnPID, PID swingPID, PID arcPID, PID headingPID);
 
         void calibrate();
 
@@ -47,14 +48,23 @@ class Chassis {
         double x;
         double y;
         double heading = 0;
+        double heading_radians;
+        float currentPose[3];
+        void ramsete(Pose targetPose, Pose currentPose, float targetAngularVelocity, float targetLinearVelocity, float beta, float zeta);
+        int FindClosest(Pose pose, std::vector<Pose>* pPath, int prevCloseIndex=0);
+        void followPath(std::vector<Pose>* pPath, float timeOut, float errorRange, float beta, float zeta, bool reversed = false);
+        
     private:
+        
         pros::MotorGroup* leftMotors;
         pros::MotorGroup* rightMotors;
         pros::IMU* imu;
         float angleError(float angle1, float angle2, bool radians);
         const float wheelDiameter;
+        const float trackWidth;
         const float gearRatio;
         pros::Mutex mutex;
+        
         double distTravelled = 0;
         float get_absolute_heading();
 };

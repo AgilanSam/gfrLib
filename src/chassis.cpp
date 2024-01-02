@@ -12,9 +12,9 @@
 #define M_1_PI		0.31830988618379067154
 #define M_2_PI		0.63661977236758134308
 
-Chassis::Chassis(pros::MotorGroup* leftMotors, pros::MotorGroup* rightMotors, pros::IMU* inertial, const float wheelDiameter,
+Chassis::Chassis(pros::MotorGroup* leftMotors, pros::MotorGroup* rightMotors, pros::IMU* inertial, const float wheelDiameter, const float trackWidth,
                  const float gearRatio, PID drivePID, PID backwardPID, PID turnPID, PID swingPID, PID arcPID, PID headingPID)
-    : leftMotors(leftMotors), rightMotors(rightMotors), imu(inertial), wheelDiameter(wheelDiameter), gearRatio(gearRatio),
+    : leftMotors(leftMotors), rightMotors(rightMotors), imu(inertial), wheelDiameter(wheelDiameter),trackWidth(trackWidth), gearRatio(gearRatio),
       drivePID(drivePID), backwardPID(backwardPID), turnPID(turnPID), swingPID(swingPID), arcPID(arcPID),headingPID(headingPID){
     this->leftMotors->set_encoder_units(pros::E_MOTOR_ENCODER_ROTATIONS);
     this->rightMotors->set_encoder_units(pros::E_MOTOR_ENCODER_ROTATIONS);
@@ -24,8 +24,9 @@ void Chassis::waitUntilDist(float dist) {
     do pros::delay(10);
     while (distTravelled <= dist && distTravelled != -1);
 } 
-
+Pose odomPose(0,0,0);
 void Chassis::calibrate() {
+    
     pros::Task calibratetask([=]{
         imu->reset();
         double prev_forward_travel = 0.0;
@@ -36,6 +37,7 @@ void Chassis::calibrate() {
         double deltaY;
     while (true) {
         //get current vals
+        
         double forward_travel = ((leftMotors->get_positions()[0]+rightMotors->get_positions()[0])/2)* (wheelDiameter*M_PI) * gearRatio;
         double heading_radians = imu->get_heading() * (M_PI / 180.0);
         double average_heading = (previous_heading + heading_radians) / 2;
@@ -45,7 +47,9 @@ void Chassis::calibrate() {
         heading = imu->get_heading();
         prev_forward_travel = forward_travel;
         previous_heading = heading_radians;
-        
+        odomPose.x = x;
+        odomPose.y = y;
+        odomPose.theta = heading_radians;
 
         pros::delay(10);
 
@@ -531,6 +535,92 @@ void Chassis::moveChassis(float linearVelocity, float angularVelocity) {
     float rightMotorRPM = rightRPM * (60.0 / 36.0);
 
     // move chassis
-    leftDrive.move_velocity(leftMotorRPM);
-    rightDrive.move_velocity(rightMotorRPM);
+    leftMotors->move_velocity(leftMotorRPM);
+    rightMotors->move_velocity(rightMotorRPM);
+}
+void Chassis::ramsete(Pose targetPose, Pose currentPose, float targetAngularVelocity, float targetLinearVelocity, float beta, float zeta) {
+    // compute global error
+    Eigen::MatrixXd globalError(1, 3);
+    globalError <<
+        targetPose.x - currentPose.x,
+        targetPose.y - currentPose.y,
+        degToRad(targetPose.theta) - currentPose.theta;
+
+    // compute transformation matrix
+    Eigen::MatrixXd transformationMatrix(3, 3);
+    transformationMatrix <<
+        cos(currentPose.theta),  sin(currentPose.theta), 0,
+        -sin(currentPose.theta), cos(currentPose.theta), 0,
+        0,                       0,                      1;
+
+    // compute local error
+    Eigen::MatrixXd localError = globalError * transformationMatrix;
+    // compute k gain
+    float k = 2 * zeta * std::sqrt(targetAngularVelocity * targetAngularVelocity + beta + targetLinearVelocity * targetLinearVelocity);
+    // compute angular velocity
+    float angularVelocity = targetAngularVelocity * cos(localError(0, 2)) + k * localError(0, 0);
+    // compute linear velocity
+    float linearVelocity = targetLinearVelocity + k * localError(0, 2) + (beta * linearVelocity * sin(localError(0, 2)) * localError(0, 1) / localError(0, 2));
+
+    // move chassis
+    moveChassis(linearVelocity, angularVelocity);
+}
+
+int Chassis::FindClosest(Pose pose, std::vector<Pose>* pPath, int prevCloseIndex) {
+    //Find the closest point to the robot
+    int closeIndex = 0;
+    float minDistance = INT_MAX;
+    for(int i = prevCloseIndex; i<pPath->size(); i++){
+        float dist = pose.distance(pPath->at(i));
+        if(dist < minDistance){
+            closeIndex = i;
+            minDistance = dist;
+        }
+    }
+    return closeIndex;
+}
+/**
+ * @brief Follow a precalculated path using the Ramsete controller
+ *
+ * @param pPath pointer to the path object with velocities
+ * @param timeOut longest time the robot can spend moving
+ * @param errorRange how close the robot must be to the desired point before stopping
+ * @param beta Proportional gain. 0 <= beta (Ramsete Controller)
+ * @param zeta Damping factor. 0.0 = no damping, 1.0 = critical damping. 0 <= beta <= 1 (Ramsete Controller)
+ * @param reversed whether the robot should turn in the opposite direction. false by default
+ * 
+ */
+void Chassis::followPath(std::vector<Pose>* pPath, float timeOut, float errorRange, float beta, float zeta, bool reversed){
+    float offFromPose = INT_MAX;
+    
+    // set up the timer
+    timeOut *= CLOCKS_PER_SEC;
+    clock_t startTime = clock(); 
+    float runtime = 0;
+
+    // initialise loop variables
+    int prevCloseIndex=0;
+
+    // keep running the controller until either time expires or the bot is within the error range
+    while(runtime <= timeOut && offFromPose >= errorRange){
+        // update runtime
+        runtime = clock() - startTime;
+
+        // find the closest index
+        int closeIndex = FindClosest(odomPose, pPath, prevCloseIndex);
+
+        // get the closest pose velocities
+        Pose closestPose = pPath->at(closeIndex);
+        float targetAngularVelocity = closestPose.angularVel;
+        float targetLinearVelocity = closestPose.linearVel;
+        
+        // set the desired pose to one ahead (so the robot is always moving forward) *****TEST******
+        int targetIndex = std::min(closeIndex+1, (int)pPath->size()-1); // ensures no out of range error
+        Pose targetPose = pPath->at(targetIndex);
+
+        // run the controller function
+        ramsete(targetPose, odomPose, targetAngularVelocity, targetLinearVelocity, beta, zeta);
+
+        pros::delay(20);
+    }
 }

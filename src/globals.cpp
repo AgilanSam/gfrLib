@@ -1,7 +1,13 @@
 #include "globals.hpp"
 
+
 //inertial sensor
 pros::IMU inertial(12);
+
+//edit
+const float wheelDiam = 2.75;
+const float trackWidth = 13;
+const float externalGearRatio = 1;
 
 //left motors
 pros::MotorGroup leftMotors(std::initializer_list<pros::Motor> {
@@ -22,8 +28,8 @@ pros::MotorGroup rightMotors(std::initializer_list<pros::Motor> {
 Chassis chassis(
     //left motors, right motors, inertial sensor
     &leftMotors, &rightMotors, &inertial, 
-    //wheel diameter, gear ratio
-    2.75, 1, 
+    //wheel diameter, track width, gear ratio
+    wheelDiam, trackWidth, externalGearRatio, 
     //forward PID
     PID(10, 0, 45, 0, 0.75, 250, 2, 750, 7000),
     //backward PID
