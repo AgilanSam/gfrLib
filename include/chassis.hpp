@@ -43,7 +43,7 @@ class Chassis {
         
         
         void moveToPose(float x1, float y1, float theta1, int timeout, bool forwards, float maxSpeed, bool async,float chasePower,
-                          float lead, bool linearexit, float linearexitrange);
+                          float lead, float smoothness, bool linearexit, float linearexitrange);
         double x;
         double y;
         double heading = 0;
