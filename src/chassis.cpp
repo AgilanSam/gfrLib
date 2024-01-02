@@ -465,8 +465,7 @@ void Chassis::moveToPose(float x1, float y1, float theta1, int timeout, bool for
         // get PID outputs
         float angularPower = -turnPID.update(radToDeg(angularError), 0);
         float linearPower = drivePID.update(linearError, 0);
-        float rescale = linearPower + fabs(angularPower) - 127.0 - 127.0 * smoothness; 
-        if (rescale>0) linearPower -=rescale; 
+    
         
         float curvature = fabs(getCurvature(currX,currY, currTheta, carrotX, carrotY, 0));
         if (curvature == 0) curvature = -1;
@@ -481,7 +480,8 @@ void Chassis::moveToPose(float x1, float y1, float theta1, int timeout, bool for
             else if (linearPower < -maxTurnSpeed && !close) linearPower = -maxTurnSpeed;
         }
         // prioritize turning over moving
-        float overturn = fabs(angularPower) + fabs(linearPower) - maxSpeed;
+        float overturn = fabs(angularPower) + fabs(linearPower) - maxSpeed - maxSpeed * smoothness;
+
         if (overturn > 0) linearPower -= linearPower > 0 ? overturn : -overturn;
 
         // calculate motor powers
