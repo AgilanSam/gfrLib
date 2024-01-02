@@ -1,5 +1,5 @@
 #include "chassis.hpp"
-
+#include "Eigen/Eigen"
 #include "pros/motors.hpp"
 #include "pros/llemu.hpp"
 #include "api.h"
@@ -514,4 +514,23 @@ void Chassis::move_without_settletime(float distance, float timeout){
     arcade(0,0);
     leftMotors->set_brake_modes(pros::E_MOTOR_BRAKE_COAST);
     rightMotors->set_brake_modes(pros::E_MOTOR_BRAKE_COAST);
+}
+
+//ramesete
+void Chassis::moveChassis(float linearVelocity, float angularVelocity) {
+    // compute left and right velocities
+    float leftVelocity = (2 * linearVelocity - angularVelocity * trackWidth) / 2; // inches/sec
+    float rightVelocity = (2 * linearVelocity + angularVelocity * trackWidth) / 2; // inches/sec
+
+    // calculate left and right wheel rpm
+    float leftRPM = leftVelocity * 60.0 / (wheelDiameter * M_PI); // rpm
+    float rightRPM = rightVelocity * 60.0 / (wheelDiameter * M_PI); // rpm
+
+    // calculate the left and right motor rpm
+    float leftMotorRPM = leftRPM * (60.0 / 36.0);
+    float rightMotorRPM = rightRPM * (60.0 / 36.0);
+
+    // move chassis
+    leftDrive.move_velocity(leftMotorRPM);
+    rightDrive.move_velocity(rightMotorRPM);
 }
