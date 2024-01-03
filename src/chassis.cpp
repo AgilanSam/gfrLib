@@ -42,8 +42,8 @@ void Chassis::calibrate() {
         double heading_radians = imu->get_heading() * (M_PI / 180.0);
         double average_heading = (previous_heading + heading_radians) / 2;
         double delta_forward_travel = forward_travel - prev_forward_travel;
-        x = forward_travel * std::sin(average_heading);
-        y = forward_travel * std::cos(average_heading);
+        x += delta_forward_travel * std::sin(average_heading);
+        y += delta_forward_travel * std::cos(average_heading);
         heading = imu->get_heading();
         prev_forward_travel = forward_travel;
         previous_heading = heading_radians;
