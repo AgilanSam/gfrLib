@@ -29,28 +29,46 @@ void Chassis::calibrate() {
     
     pros::Task calibratetask([=]{
         imu->reset();
-        double prev_forward_travel = 0.0;
-        double previous_heading = 0.0;
-        double xval;
-        double yval;
-        double deltaX;
-        double deltaY;
+        leftMotors->tare_positions();
+        rightMotors->tare_positions();
+        double prevHeading = 0;
+        double currentHeading = 0;
+        double deltaHeading = 0;
+        double currentForTravel = 0;
+        double prevForTravel = 0;
+        double deltaForTravel = 0;
+        double sin_angle = 0;
+        double cos_angle = 0;
     while (true) {
-        //get current vals
-        
-        double forward_travel = ((leftMotors->get_positions()[0]+rightMotors->get_positions()[0])/2)* (wheelDiameter*M_PI) * gearRatio;
-        double heading_radians = imu->get_heading() * (M_PI / 180.0);
-        double average_heading = (previous_heading + heading_radians) / 2;
-        double delta_forward_travel = forward_travel - prev_forward_travel;
-        x += delta_forward_travel * std::sin(heading_radians);
-        y += delta_forward_travel * std::cos(heading_radians);
-        heading = imu->get_heading();
-        prev_forward_travel = forward_travel;
-        previous_heading = heading_radians;
-        odomPose.x = x;
-        odomPose.y = y;
-        odomPose.theta = heading_radians;
+         
+        currentForTravel = ((leftMotors->get_positions()[0]+rightMotors->get_positions()[0])/2)* (wheelDiameter*M_PI) * gearRatio;
+        deltaForTravel = currentForTravel - prevForTravel;
+        prevForTravel = currentForTravel;
 
+        currentHeading = std::fmod((360.0 - imu->get_heading()), 360.0);
+        deltaHeading = currentHeading - prevHeading;
+        prevHeading = currentHeading;
+
+        constexpr double delta_sideways_travel = 0.0;
+        double average_heading = previous_heading + delta_heading / 2.0;
+
+        if (delta_heading == 0.0) {
+            sin_angle = sin(degToRad(average_heading));
+	         cos_angle = cos(degToRad(average_heading));
+
+            x+= deltaForTravel * cos_angle - delta_sideways_travel * sin_angle;
+            y+= deltaForTravel* sin_angle + delta_sideways_travel * cos_angle;
+			
+		} else {
+
+            //chord length formulae fr
+            sin_angle = sin(degToRad(average_heading));
+	         cos_angle = cos(degToRad(average_heading));
+
+            x+= 2.0 * (delta_forward_travel / degToRad(delta_heading)) * std::sin(degToRad(delta_heading / 2)) * cos_angle - 0.0 * sin_angle;
+            y+= 2.0 * (delta_forward_travel / degToRad(delta_heading)) * std::sin(degToRad(delta_heading / 2)) * sin_angle + 0.0 * cos_angle;
+            
+		}
         pros::delay(10);
 
     }
@@ -59,7 +77,6 @@ void Chassis::calibrate() {
     
     
 }
-
 void Chassis::setHeading(float heading) {
     imu->set_heading(heading);
 }
