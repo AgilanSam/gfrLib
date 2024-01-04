@@ -67,8 +67,13 @@ void Chassis::calibrate() {
 
             x+= 2.0 * (delta_forward_travel / degToRad(delta_heading)) * std::sin(degToRad(delta_heading / 2)) * cos_angle - 0.0 * sin_angle;
             y+= 2.0 * (delta_forward_travel / degToRad(delta_heading)) * std::sin(degToRad(delta_heading / 2)) * sin_angle + 0.0 * cos_angle;
-            
+
+	
 		}
+	//update odompose
+	odomPose.x = x;
+	odomPose.y = y;
+	odomPose.theta = degToRad(imu->get_heading());
         pros::delay(10);
 
     }
@@ -548,8 +553,8 @@ void Chassis::moveChassis(float linearVelocity, float angularVelocity) {
     float rightRPM = rightVelocity * 60.0 / (wheelDiameter * M_PI); // rpm
 
     // calculate the left and right motor rpm
-    float leftMotorRPM = leftRPM * (60.0 / 36.0);
-    float rightMotorRPM = rightRPM * (60.0 / 36.0);
+    float leftMotorRPM = leftRPM * (gearRatio); //gearset
+    float rightMotorRPM = rightRPM * (gearRatio); //gearset
 
     // move chassis
     leftMotors->move_velocity(leftMotorRPM);
@@ -581,7 +586,7 @@ void Chassis::ramsete(Pose targetPose, Pose currentPose, float targetAngularVelo
 
     // move chassis
     moveChassis(linearVelocity, angularVelocity);
-}
+} // works
 
 int Chassis::FindClosest(Pose pose, std::vector<Pose>* pPath, int prevCloseIndex) {
     //Find the closest point to the robot
@@ -596,32 +601,19 @@ int Chassis::FindClosest(Pose pose, std::vector<Pose>* pPath, int prevCloseIndex
     }
     return closeIndex;
 }
-/**
- * @brief Follow a precalculated path using the Ramsete controller
- *
- * @param pPath pointer to the path object with velocities
- * @param timeOut longest time the robot can spend moving
- * @param errorRange how close the robot must be to the desired point before stopping
- * @param beta Proportional gain. 0 <= beta (Ramsete Controller)
- * @param zeta Damping factor. 0.0 = no damping, 1.0 = critical damping. 0 <= beta <= 1 (Ramsete Controller)
- * @param reversed whether the robot should turn in the opposite direction. false by default
- * 
- */
+
 void Chassis::followPath(std::vector<Pose>* pPath, float timeOut, float errorRange, float beta, float zeta, bool reversed){
     float offFromPose = INT_MAX;
     
     // set up the timer
-    timeOut *= CLOCKS_PER_SEC;
-    clock_t startTime = clock(); 
+    auto start = pros::millis();
     float runtime = 0;
 
     // initialise loop variables
     int prevCloseIndex=0;
 
     // keep running the controller until either time expires or the bot is within the error range
-    while(runtime <= timeOut && offFromPose >= errorRange){
-        // update runtime
-        runtime = clock() - startTime;
+    while(pros::millis() - start < timeOut && offFromPose >= errorRange){
 
         // find the closest index
         int closeIndex = FindClosest(odomPose, pPath, prevCloseIndex);
