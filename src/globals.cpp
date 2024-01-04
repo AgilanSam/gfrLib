@@ -1,6 +1,6 @@
 #include "globals.hpp"
 
-
+// need to add lateral and angular PID settings for odometry movements, PID movements have different PIDS and so do odom movements for full customization.
 //inertial sensor
 pros::IMU inertial(12);
 
