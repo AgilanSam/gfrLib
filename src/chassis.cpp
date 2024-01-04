@@ -620,8 +620,8 @@ void Chassis::followPath(std::vector<Pose>* pPath, float targetLinVel, float tar
 
         // get the closest pose velocities
         Pose closestPose = pPath->at(closeIndex);
-        float targetAngularVelocity = targetLinVel;
-        float targetLinearVelocity = targetAngVel;
+        float targetAngularVelocity = targetAngVel;
+        float targetLinearVelocity = targetLinVel;
         
         // set the desired pose to one ahead (so the robot is always moving forward) *****TEST******
         int targetIndex = std::min(closeIndex+1, (int)pPath->size()-1); // ensures no out of range error
