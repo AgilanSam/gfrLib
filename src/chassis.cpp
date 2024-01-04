@@ -602,7 +602,7 @@ int Chassis::FindClosest(Pose pose, std::vector<Pose>* pPath, int prevCloseIndex
     return closeIndex;
 }
 
-void Chassis::followPath(std::vector<Pose>* pPath, float timeOut, float errorRange, float beta, float zeta, bool reversed){
+void Chassis::followPath(std::vector<Pose>* pPath, float targetLinVel, float targetAngVel, float timeOut, float errorRange, float beta, float zeta, bool reversed){
     float offFromPose = INT_MAX;
     
     // set up the timer
@@ -620,8 +620,8 @@ void Chassis::followPath(std::vector<Pose>* pPath, float timeOut, float errorRan
 
         // get the closest pose velocities
         Pose closestPose = pPath->at(closeIndex);
-        float targetAngularVelocity = closestPose.angularVel;
-        float targetLinearVelocity = closestPose.linearVel;
+        float targetAngularVelocity = targetLinVel;
+        float targetLinearVelocity = targetAngVel;
         
         // set the desired pose to one ahead (so the robot is always moving forward) *****TEST******
         int targetIndex = std::min(closeIndex+1, (int)pPath->size()-1); // ensures no out of range error
