@@ -346,14 +346,7 @@ std::pair<double, double> Chassis::getPose(){
     return std::make_pair(x, y);
 
 } 
-void Chassis::moveToPoint(float x1, float y1, int timeout, float maxSpeed){
-        //turn part
-        float angleError = atan2(y - y1, x - x1); //can flip this
-        turn(rollAngle180(radToDeg(angleError))); //was negative
-        float lateralError = distance(x,y, x1,y1);
-        move(lateralError, maxSpeed);
-    
-}
+
     
 void Chassis::turnToPoint(float x1, float y1, int timeout, float maxSpeed){
         //turn part
@@ -388,7 +381,7 @@ float getCurvature(double posex, double posey, double posetheta, double otherx, 
     // return curvature
     return side * ((2 * x) / (d * d));
 }
-void Chassis::activeMoveToPoint(float x1, float y1, int timeout, float maxSpeed){
+void Chassis::moveToPoint(float x1, float y1, int timeout, float maxSpeed){
     turnPID.reset();
     drivePID.reset();
     
@@ -557,6 +550,7 @@ void Chassis::moveChassis(float linearVelocity, float angularVelocity) {
     leftMotors->move_velocity(leftMotorRPM);
     rightMotors->move_velocity(rightMotorRPM);
 }
+
 void Chassis::ramsete(Pose targetPose, Pose currentPose, float targetAngularVelocity, float targetLinearVelocity, float beta, float zeta) {
     // compute global error
     Eigen::MatrixXd globalError(1, 3);
