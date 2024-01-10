@@ -51,8 +51,8 @@ class Chassis {
         double heading_radians;
         float currentPose[3];
         void ramsete(Pose targetPose, Pose currentPose, float targetAngularVelocity, float targetLinearVelocity, float beta, float zeta);
-        int FindClosest(Pose pose, std::vector<Pose>* pPath, int prevCloseIndex=0);
-        void followPath(std::vector<Pose>* pPath, float targetLinVel, float targetAngVel, float timeOut, float errorRange, float beta, float zeta, bool reversed);
+        int FindClosest(Pose pose, std::vector<Pose> pPath, int prevCloseIndex=0);
+        void followPath(std::vector<Pose> pPath, float targetLinVel, float targetAngVel, float timeOut, float errorRange, float beta, float zeta, bool reversed);
         
     private:
         
