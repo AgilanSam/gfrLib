@@ -276,8 +276,8 @@ void Chassis::swing_without_settle(float heading, bool isLeft, float timeout){
         do {
         float error = rollAngle180(heading - imu->get_heading());
         float pidOutput = swingPID.update(0, -error);
-
-        tank(pidOutput, 0);
+        Chassis::leftMotors->set_brake_modes(pros::E_MOTOR_BRAKE_HOLD);
+        tank(0, pidOutput);
 
         pros::lcd::print(1, "heading: %f", imu->get_heading());
 
@@ -291,8 +291,8 @@ void Chassis::swing_without_settle(float heading, bool isLeft, float timeout){
         do {
         float error = rollAngle180(heading - imu->get_heading());
         float pidOutput = swingPID.update(0, -error);
-        
-        tank(0, pidOutput);
+        Chassis::rightMotors->set_brake_modes(pros::E_MOTOR_BRAKE_HOLD);
+        tank(pidOutput, 0);
 
         pros::lcd::print(1, "heading: %f", imu->get_heading());
 
@@ -585,12 +585,12 @@ void Chassis::ramsete(Pose targetPose, Pose currentPose, float targetAngularVelo
     moveChassis(linearVelocity, angularVelocity);
 } // works
 
-int Chassis::FindClosest(Pose pose, std::vector<Pose>* pPath, int prevCloseIndex) {
+int Chassis::FindClosest(Pose pose, std::vector<Pose> pPath, int prevCloseIndex) {
     //Find the closest point to the robot
     int closeIndex = 0;
     float minDistance = INT_MAX;
-    for(int i = prevCloseIndex; i<pPath->size(); i++){
-        float dist = pose.distance(pPath->at(i));
+    for(int i = prevCloseIndex; i<pPath.size(); i++){
+        float dist = pose.distance(pPath.at(i));
         if(dist < minDistance){
             closeIndex = i;
             minDistance = dist;
@@ -599,7 +599,7 @@ int Chassis::FindClosest(Pose pose, std::vector<Pose>* pPath, int prevCloseIndex
     return closeIndex;
 }
 
-void Chassis::followPath(std::vector<Pose>* pPath, float targetLinVel, float targetAngVel, float timeOut, float errorRange, float beta, float zeta, bool reversed){
+void Chassis::followPath(std::vector<Pose> pPath, float targetLinVel, float targetAngVel, float timeOut, float errorRange, float beta, float zeta, bool reversed){
     float offFromPose = INT_MAX;
     
     // set up the timer
@@ -616,13 +616,13 @@ void Chassis::followPath(std::vector<Pose>* pPath, float targetLinVel, float tar
         int closeIndex = FindClosest(odomPose, pPath, prevCloseIndex);
 
         // get the closest pose velocities
-        Pose closestPose = pPath->at(closeIndex);
+        Pose closestPose = pPath.at(closeIndex);
         float targetAngularVelocity = targetAngVel;
         float targetLinearVelocity = targetLinVel;
         
         // set the desired pose to one ahead (so the robot is always moving forward) *****TEST******
-        int targetIndex = std::min(closeIndex+1, (int)pPath->size()-1); // ensures no out of range error
-        Pose targetPose = pPath->at(targetIndex);
+        int targetIndex = std::min(closeIndex+1, (int)pPath.size()-1); // ensures no out of range error
+        Pose targetPose = pPath.at(targetIndex);
 
         // run the controller function
         ramsete(targetPose, odomPose, targetAngularVelocity, targetLinearVelocity, beta, zeta);
