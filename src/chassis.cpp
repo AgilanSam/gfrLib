@@ -604,7 +604,7 @@ void Chassis::followPath(std::vector<Pose> pPath, float targetLinVel, float targ
     int prevCloseIndex=0;
 
     // keep running the controller until either time expires or the bot is within the error range
-    while(pros::millis() - start < timeOut && offFromPose >= errorRange){
+    while(pros::millis() - start < timeOut){
 
         // find the closest index
         int closeIndex = FindClosest(odomPose, pPath, prevCloseIndex);
