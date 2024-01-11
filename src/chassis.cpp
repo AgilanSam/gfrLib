@@ -70,8 +70,8 @@ void Chassis::calibrate() {
             sin_angle = sin(degToRad(average_heading));
 	         cos_angle = cos(degToRad(average_heading));
 
-            x+= 2.0 * (deltaForTravel / degToRad(deltaHeading)) * std::sin(degToRad(deltaHeading / 2)) * cos_angle - 0.0 * sin_angle;
-            y+= 2.0 * (deltaForTravel / degToRad(deltaHeading)) * std::sin(degToRad(deltaHeading / 2)) * sin_angle + 0.0 * cos_angle;
+            x+= (2.0 * (deltaForTravel / degToRad(deltaHeading)) * std::sin(degToRad(deltaHeading / 2))) * cos_angle - 0.0 * sin_angle;
+            y+= (2.0 * (deltaForTravel / degToRad(deltaHeading)) * std::sin(degToRad(deltaHeading / 2))) * sin_angle + 0.0 * cos_angle;
 
 	
 		}
